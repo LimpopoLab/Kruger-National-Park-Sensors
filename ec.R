@@ -36,7 +36,7 @@ temp <- ggplot(ec) +
 cond <- ggplot(ec) +
      geom_line(aes(x=sast,y=ec)) +
      xlab("Date (interval = 10 minutes)") +
-     ylab(TeX("Conductivity ($\mu S/cm$)")) +
+     ylab(TeX("Conductivity ($\\mu S/cm$)")) +
      theme(panel.background = element_rect(fill = "white", colour = "black")) + 
      theme(aspect.ratio = 0.4) +
      theme(axis.text = element_text(face = "plain", size = 12))
