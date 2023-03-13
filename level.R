@@ -55,7 +55,8 @@ levCUAHSI <- level %>%
      mutate(LocalDateTime=as.character(sast)) %>%
      mutate(UTCOffset=offsetHRS) %>%
      mutate(DateTimeUTC=as.character(utc)) %>%
-     mutate(WTMP=temperature) %>%
+     mutate(WTMP=temperature) %>% # water temperature, degrees C
+     mutate(RIVS=lev)
      select(LocalDateTime,UTCOffset,DateTimeUTC,WTMP,RIVS) %>%
      pivot_longer(c(WTMP,RIVS), names_to = "VariableCode", values_to = "DataValue")
 # Sabie River sites:
@@ -96,10 +97,20 @@ hl <- data.frame(hl)
 write_csv(hl, paste0(st, "_", today, ".cuahsi.csv"), append = TRUE, eol = "\n") # writes headers
 write_csv(upload, paste0(st, "_", today, ".cuahsi.csv"), na = "NA", append = TRUE, eol = "\n") # writes data, UNIX standard end of line, comma-delimited, decimal point used "."
 
+
+
+
+
+
+
 # Temperature and flow analysis
 # appears to have a reciprocal relationship in late December and early January
 range <- c(ymd_hms("2022-12-16T00:00:00"),as.numeric(ymd_hms("2023-01-16T00:00:00")))
-temp <- ggplot(level) +
+st <- as.numeric(which(level$utc==range[1]))
+en <- as.numeric(which(level$utc==range[2]))
+zoom <- level[st:en,1:5]
+
+temp <- ggplot(zoom) +
      geom_line(aes(x=sast,y=temperature)) +
      ylab(TeX('Temperature $(^o C)$')) +
      xlab(element_blank()) +
@@ -107,7 +118,8 @@ temp <- ggplot(level) +
      theme(panel.background = element_rect(fill = "white", colour = "black")) + 
      theme(aspect.ratio = 0.4) +
      theme(axis.text = element_text(face = "plain", size = 12))
-lev <- ggplot(level) +
+gtemp <- ggplotGrob(temp)
+lev <- ggplot(zoom) +
      geom_line(aes(x=sast,y=height)) +
      xlab("Date (interval = 10 minutes)") +
      ylab("Depth (m)") +
@@ -115,15 +127,8 @@ lev <- ggplot(level) +
      theme(panel.background = element_rect(fill = "white", colour = "black")) + 
      theme(aspect.ratio = 0.4) +
      theme(axis.text = element_text(face = "plain", size = 12))
-gtemp <- ggplotGrob(temp)
 glev <- ggplotGrob(lev)
-grid::grid.newpage()
-lev_out <- grid::grid.draw(rbind(gtemp,glev))
-
-st <- as.numeric(which(level$utc==range[1]))
-en <- as.numeric(which(level$utc==range[2]))
-zoom <- level[st:en,1:5]
-ggplot(zoom) +
+lev_v_temp <- ggplot(zoom) +
      geom_point(aes(x=height,y=temperature)) +
      xlim(c(0.5,1.0)) +
      ylim(c(21,31)) +
@@ -132,7 +137,10 @@ ggplot(zoom) +
      theme(panel.background = element_rect(fill = "white", colour = "black")) + 
      theme(aspect.ratio = 1) +
      theme(axis.text = element_text(face = "plain", size = 12))
+glevtemp <- ggplotGrob(lev_v_temp)
 
+grid::grid.newpage()
+release_out <- grid::grid.draw(cbind(rbind(gtemp,glev),glevtemp))
 
 
 
