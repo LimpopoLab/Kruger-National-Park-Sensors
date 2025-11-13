@@ -26,6 +26,28 @@ allText.DateTime = datetimeCol;
 validSensor = ~isnan(allText.DO_mg_l_) & ~isnat(allText.DateTime);
 allText_clean = allText(validSensor, :);
 
+% --- NEW SECTION: Daily average DO minus 3.8 and set negatives to zero ---
+
+% Extract the date (no time) for grouping
+allText_clean.DateOnly = dateshift(allText_clean.DateTime, 'start', 'day');
+
+% Compute daily average DO
+dailyDO = groupsummary(allText_clean, "DateOnly", "mean", "DO_mg_l_");
+
+% Subtract 3.8 from the daily mean
+dailyDO.mean_DO_mg_l_ = dailyDO.mean_DO_mg_l_ - 3.8;
+
+% Replace any negative values with 0
+dailyDO.mean_DO_mg_l_(dailyDO.mean_DO_mg_l_ < 0) = 0;
+
+% Optional: merge back to allText_clean if you want each timestamp to have
+% the adjusted daily value
+allText_clean = outerjoin(allText_clean, dailyDO(:,["DateOnly","mean_DO_mg_l_"]), ...
+    "Keys", "DateOnly", "MergeKeys", true);
+
+% Rename for clarity
+allText_clean.Properties.VariableNames{'mean_DO_mg_l_'} = 'DO_daily_adjusted';
+
 
 
 bal_jacques = readtable("Copy of Balule quality data David.xlsx");
@@ -34,7 +56,7 @@ bal_jacques = readtable("Copy of Balule quality data David.xlsx");
 bal_jacques.Properties.VariableNames = matlab.lang.makeValidName( ...
     strtrim(bal_jacques.Properties.VariableNames));
 
-bal_jacques.Properties.VariableNames
+
 
 % Ensure Time column is a string array
 if iscell(bal_jacques.Time)
@@ -61,7 +83,7 @@ validRows = ~isnan(bal_jacques.DOMg_l) & ~isnat(bal_jacques.DateTime);
 bal_jacques_clean = bal_jacques(validRows, :);
 
 
-plot(allText_clean.DateTime, allText_clean.DO_mg_l_, 'b', 'DisplayName','Sensor DO');
+plot(allText_clean.DateTime, allText_clean.DO_daily_adjusted, 'b', 'DisplayName','Sensor DO');
 hold on;
 plot(bal_jacques_clean.DateTime, bal_jacques_clean.DOMg_l, 'r*', 'DisplayName','Manual DO');
 legend('show');
@@ -70,10 +92,13 @@ legend('show');
 title('Balule Dissolved Oxygen (25 Nov 2024 – 31 Jan 2025)');
 xlabel('Date');
 ylabel('Dissolved Oxygen (mg/L)');
+ylim([0 8]);
+yline(5, 'r', 'DisplayName', 'Minimum Accepted Value of DO')
 
 % Define the date range
 startDate = datetime(2024,11,25);
-endDate = datetime(2025,1,31);
+endDate = datetime(2025,1,13);
+
 
 % Set x-axis limits
 xlim([startDate endDate]);
